@@ -1,146 +1,65 @@
-手机号码归属地信息库、手机号归属地查询
-----------------------------
+# 手机号码归属地信息库、手机号归属地查询
 
-### 这可能是github上能找到的最新最全的中国境内手机号归属地信息库
-基于GO语言实现，使用二分查找法。
+[![Maven Central](https://img.shields.io/maven-central/v/cn.lalaki/phone_location.svg?label=Maven%20Central&logo=sonatype)](https://central.sonatype.com/artifact/cn.lalaki/phone_location/)
+[![License: Apache-2.0 (shields.io)](https://img.shields.io/badge/GNU-GPLv3-A40000?logo=gnu)](./LICENSE)
 
- - 归属地信息库文件大小：4,484,792 字节
- - 归属地信息库最后更新：2023年02月
- - 手机号段记录条数：497191
+**本项目移植自 [xluohome/phonedata](https://github.com/xluohome/phonedata)，实现了手机号归属地查询功能的
+Java 版本，同时兼容 Android 设备，并已发布至 Maven
+中央仓库。如果有缺失的手机号段，请下载 [phone.xlsx](./phone.xlsx)
+文件添加到表格再提交到这里，不想提交PR也可以直接发到我的邮箱[i@lalaki.cn](mailto:i@lalaki.cn)。如果你需要
+Xlsx 转 Dat，可以点[这里](https://github.com/lalakii/phonedata/releases)下载现成的工具。**
 
-### phone.dat文件格式
+## 更新日志
 
-        | 4 bytes |                     <- phone.dat 版本号（如：1701即17年1月份）
-        ------------
-        | 4 bytes |                     <-  第一个索引的偏移
-        -----------------------
-        |  offset - 8            |      <-  记录区
-        -----------------------
-        |  index                 |      <-  索引区
-        -----------------------
+基于原作者2302版本的数据新增,
+[点此查看更新了哪些号段](https://github.com/lalakii/phonedata/releases)
 
-1. 头部为8个字节，版本号为4个字节，第一个索引的偏移为4个字节；
-2. 记录区 中每条记录的格式为"<省份>|<城市>|<邮编>|<长途区号>\0"。 每条记录以'\0'结束；
-3. 索引区 中每条记录的格式为"<手机号前七位><记录区的偏移><卡类型>"，每个索引的长度为9个字节；
+## Gradle
 
-### 安装使用
+```kts
+dependencies {
+    implementation("cn.lalaki:phone_location:1.2.0") // Java 引用这个
 
- vi test.go
+    implementation("cn.lalaki:phone_location_android:1.2.0") // Android 引用这个 (AAR包)
 
-```
-package main
-
-import (
-	"fmt"
-
-	"github.com/xluohome/phonedata"
-)
-
-func main() {
-	pr, err := phonedata.Find("18957509123")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Print(pr)
+    // 数据库资源文件 (可选), 若不引入, 则需要通过 loadDAT 函数指定数据库文件 phone.dat
+    implementation("cn.lalaki:phone_location:1.2.0:resources")
 }
-
-````
-go run test.go
-
-```
-PhoneNum: 18957509123
-AreaZone: 0575
-CardType: 中国电信
-City: 绍兴
-ZipCode: 312000
-Province: 浙江
 ```
 
-### 快速使用
+## 代码示例
 
-cmd 目录下phonedata是一个命令行查询手机号归属地信息的终端程序。
+```java
+import cn.lalaki.phone.location.PhoneLocation;
+import cn.lalaki.phone.location.PhoneLocation.PhoneInfo;
+
+public class Example {
+    public static void main(String[] args) {
+        // 查询 11位 手机号 或 手机号的 前7位
+        PhoneInfo info = PhoneLocation.queryPhoneInfo("your tel number");
+        System.out.println(info.province()); // 省
+        System.out.println(info.city()); // 市
+        System.out.println(info.zipCode()); // 邮编
+        System.out.println(info.areaCode()); // 区号
+        System.out.println(info.carrier()); // 运营商, 受携号转网业务影响, 此处获取的运营商不准确
+        System.out.println(info.version()); // 数据库版本
+
+        // 可选, 自定义数据库缓存路径, 必须是一个支持读写的文件夹, 需要在加载数据库文件之前执行
+        PhoneLocation.setTempDirectory(new File("your_temp_directory"));
+        // 对于 Android 设备, 这样设置下兼容性更好
+        // PhoneLocation.setTempDirectory(getCacheDir());
+
+        // 可选, 自定义数据库文件, 完整引用时，也可以自定义数据库文件, 此选项的优先级最高
+        PhoneLocation.loadDAT(new File("your_phone_dat"));
+
+        // 可选, 清理数据库缓存
+        PhoneLocation.clearCache();
+    }
+}
 ```
 
-Linux:
-#PHONE_DATA_DIR=../ ./phonedata  18957509123
+## LICENSE
 
-Windows:
->set PHONE_DATA_DIR=../
->phonedata.exe  18957509123
-```
-stdout:
-```
-PhoneNum: 18957509123
-AreaZone: 0575
-CardType: 中国电信
-City: 绍兴
-ZipCode: 312000
-Province: 浙江
-```
+[GPL-3.0](./LICENSE)
 
-### 性能测试
-
-go version go1.17.6 windows/amd64
-
-```
-> go test --bench="."
-
-goos: windows
-goarch: amd64
-pkg: github.com/xluohome/phonedata
-cpu: AMD Ryzen 5 PRO 4650U with Radeon Graphics
-BenchmarkFindPhone-12            8454013               152.5 ns/op
-
-```
-
-### 我仅想要phone.dat的csv文本文件?
-
-好。下载地址
-https://git.oschina.net/oss/phonedata/attach_files
-
-
-### 其他语言实现
-
-python: https://github.com/ls0f/phone
-
-php:  https://github.com/shitoudev/phone-location , https://github.com/iwantofun/php_phone
-
-php ext: https://github.com/jonnywang/phone
-
-java: https://github.com/fengjiajie/phone-number-geo , https://github.com/EeeMt/phone-number-geo
-
-Node: https://github.com/conzi/phone
-
-C++: https://github.com/yanxijian/phonedata
-
-C#: https://github.com/sndnvaps/Phonedata ,  https://github.com/rwecho/Phone.Dotnet.git (dotnet core)
-
-Rust: https://github.com/vincascm/phonedata
-
-Kotlin: https://github.com/bytebeats/phone-geo
-
-Ruby: https://github.com/forwaard/phonedata
-
-### 安全保证
-
-手机号归属地信息是通过网上公开数据进行收集整理。
-
-对手机号归属地信息数据的绝对正确，我不做任何保证。因此在生产环境使用前请您自行校对测试。
-
-
-### 客户案例
-
-- [360](https://www.360.cn/)
-- [MAGAPP](http://www.magapp.cc/)
-- ...
-
-### 感谢
-@ls0f https://github.com/ls0f
-
-@zhengji  https://github.com/zheng-ji/gophone
-
-### 联系作者
-
-加作者微信
-
-![wx.jpg](https://ucc.alicdn.com/pic/developer-ecology/f41fd688affb41fc8853c4f99abd3d45.jpg)
+## By lalaki.cn

@@ -1,0 +1,102 @@
+plugins {
+    id 'java-library'
+    id 'cn.lalaki.central'
+}
+def finalRepo = uri("D:\\repo\\")
+centralPortalPlus {
+    url = finalRepo
+    tokenXml = uri("D:\\BIN\\token.txt")
+}
+afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                url = finalRepo
+            }
+        }
+        publications {
+            release(MavenPublication) {
+                from components.java
+                artifact resourcesJar
+                pom {
+                    name = projectName
+                    artifactId = projectName
+                    groupId = "cn.lalaki"
+                    version = releaseVersion
+                    description = "[Java Port] 中国大陆手机号码归属地信息库、手机号归属地查询。"
+                    url = projectUrl
+                    licenses {
+                        license {
+                            name = projectLicense
+                            url = projectLicenseUrl
+                        }
+                    }
+                    developers {
+                        developer {
+                            name = 'lalakii'
+                            email = "i@lalaki.cn"
+                            url = "https://lalaki.cn"
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:' + projectUrl + '.git'
+                        url = projectUrl
+                    }
+                    organization {
+                        name = "lalaki.cn"
+                        url = projectUrl
+                    }
+                    issueManagement {
+                        url = projectUrl + "/issues"
+                    }
+                }
+            }
+        }
+    }
+    signing {
+        useGpgCmd()
+        sign publishing.publications
+    }
+}
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
+}
+tasks.withType(Javadoc).configureEach {
+    options {
+        addStringOption("Xdoclint:none", "-quiet")
+        encoding "UTF-8"
+        charSet "UTF-8"
+        links "https://docs.oracle.com/en/java/javase/17/docs/api/"
+    }
+}
+jar {
+    exclude "assets"
+}
+tasks.register('resourcesJar', Jar) {
+    archiveClassifier.set('resources')
+    from(tasks.named('processResources'))
+    include "**/*.dat"
+}
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+        events "passed", "skipped", "failed"
+        showExceptions = true
+        showStackTraces = true
+    }
+}
+ext {
+    projectName = "phone_location"
+    projectUrl = "https://github.com/lalakii/phonedata"
+    projectLicense = "GNU General Public License v3.0"
+    projectLicenseUrl = "https://www.gnu.org/licenses/gpl-3.0.en.html"
+    releaseVersion = "1.2.0"
+}
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
